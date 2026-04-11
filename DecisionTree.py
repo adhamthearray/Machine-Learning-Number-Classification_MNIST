@@ -9,8 +9,9 @@ class DecisionTree:
             self.decision = decision
 
             
-    def __init__(self , maxDepth):
+    def __init__(self , maxDepth , minSamplesSplit):
         self.maxDepth = maxDepth
+        self.minSamplesSplit = minSamplesSplit
         self.root = None
     
     def majorityLabel(self, labels):
@@ -70,6 +71,8 @@ class DecisionTree:
             decisionClass = (np.unique(labels))[0]
             return self.Node(decision=decisionClass)
         if depth >= self.maxDepth:
+            return self.Node(decision=self.majorityLabel(labels))
+        if len(labels) < self.minSamplesSplit:
             return self.Node(decision=self.majorityLabel(labels))
         
         feature , threshold  = self.getFeature(data , labels)
