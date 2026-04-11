@@ -13,7 +13,9 @@ class DecisionTree:
         self.maxDepth = maxDepth
         self.root = None
     
-    
+    def majorityLabel(self, labels):
+        counts = np.bincount(labels)
+        return np.argmax(counts)
     def getThreshold(self ,featureValues , labels):
         entropy = []
         labelCount = len(labels)
@@ -62,8 +64,28 @@ class DecisionTree:
             thresholds.append(optimalThreshold)
         minEntropyIndex = np.argmin(entropy)
         return minEntropyIndex , thresholds[minEntropyIndex]
-
-            
+    def buildTree(self , data , labels , depth = 0 ):
+        #Base case law el labels el da5laly kolaha nafs el labels aw el depth aw el min sample leaves bas for now labels bas
+        if len(np.unique(labels)) == 1:
+            decisionClass = (np.unique(labels))[0]
+            return self.Node(decision=decisionClass)
+        if depth >= self.maxDepth:
+            return self.Node(decision=self.majorityLabel(labels))
+        
+        feature , threshold  = self.getFeature(data , labels)
+        #Case if all values are the same and there is no valid split
+        if feature == None and threshold == None:
+            return self.Node(decision=self.majorityLabel(labels))
+       
+        leftData = data[data[:,feature]<= threshold]
+        leftLabels = labels[data[:,feature]<= threshold]
+        rightData = data[data[:,feature]> threshold]
+        rightLables = labels[data[:,feature] >  threshold]
+        leftChild = self.buildTree(leftData ,leftLabels , depth+1)
+        rightChild = self.buildTree(rightData , rightLables , depth+1)
+        return self.Node(feature , threshold , leftChild , rightChild)
+        
+       
 
 
 
