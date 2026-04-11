@@ -1,3 +1,4 @@
+#Codak we7e4 ya adham
 import numpy as np
 
 def gaussian(x, mean, var):
