@@ -34,6 +34,8 @@ class DecisionTree:
             threshold = (sortedFeatureValues[i] + sortedFeatureValues[i+1])/2
             thresholds.append(threshold)
             entropy.append(w_entropy)
+        if len(entropy) == 0:
+            return None , None
         minEntropyIndex = np.argmin(entropy)
         minEntropy = entropy[minEntropyIndex]
         minThreshold = thresholds[minEntropyIndex]
@@ -57,14 +59,17 @@ class DecisionTree:
     def getFeature(self,trainingData , labels):
         entropy = []
         thresholds = []
+        featureIndices = []
         noOfFeatures = trainingData.shape[1]
         for j in range(noOfFeatures):
             featureValues = trainingData[:,j]
             optimalThreshold , minEntropy = self.getThreshold(featureValues , labels)
+            if optimalThreshold == None: continue
             entropy.append(minEntropy)
             thresholds.append(optimalThreshold)
+            featureIndices.append(j)
         minEntropyIndex = np.argmin(entropy)
-        return minEntropyIndex , thresholds[minEntropyIndex]
+        return featureIndices[minEntropyIndex] , thresholds[minEntropyIndex]
     def buildTree(self , data , labels , depth = 0 ):
         #Base case law el labels el da5laly kolaha nafs el labels aw el depth aw el min sample leaves bas for now labels bas
         if len(np.unique(labels)) == 1:
@@ -87,14 +92,20 @@ class DecisionTree:
         leftChild = self.buildTree(leftData ,leftLabels , depth+1)
         rightChild = self.buildTree(rightData , rightLables , depth+1)
         return self.Node(feature , threshold , leftChild , rightChild)
-        
-       
 
-
-
-
-
-
-
-
-    
+    def fit(self , trainingData , labels):
+        self.root = self.buildTree(trainingData , labels)
+    def traverseTree(self , dataPoint , node):
+        if node.decision != None:
+            return node.decision
+        if dataPoint[node.feature] <= node.threshold:
+            return self.traverseTree(dataPoint , node.left)
+        else:
+            return self.traverseTree(dataPoint , node.right)
+    def predict(self , datapoints):
+        if self.root is None:
+            raise ValueError("Decision tree has not been trained. Call fit() first.")
+        predictions = []
+        for datapoint in datapoints:
+            predictions.append(self.traverseTree(datapoint , self.root))
+        return np.array(predictions)
