@@ -12,10 +12,13 @@ class LogReg():
         return np.dot(x, self.weights) + self.bias
     
     def __sigmoid(self, z):
+        z = np.clip(z, -500, 500)
         return 1.0 / (1.0 + np.exp(-z))
     
     def __loss(self, preds, y):
         m = len(y)
+        eps = 1e-9
+        preds = np.clip(preds, eps, 1 - eps)
         return - (1/m) * np.sum(y * np.log(preds) + (1 - y) * np.log(1 - preds))
     
     def fit(self, x, y):
@@ -28,6 +31,9 @@ class LogReg():
             probas = self.__sigmoid(linear_predictions)
             cost = self.__loss(probas, y)
             
+            if i % 10 == 0:
+                print(f"Iteration {i}, Loss: {cost}")
+            
             dw = np.dot(x.T, (probas-y)) / num_samples
             db = np.sum(probas-y) / num_samples
             
@@ -38,7 +44,9 @@ class LogReg():
         linear_predictions = self.__linear(test)
         probas = self.__sigmoid(linear_predictions)
         return (probas >= self.threshold).astype(int)
-    
+
+
+'''
 def main():
     X3 = np.random.randn(100, 2)
     y3 = (X3[:, 0] + X3[:, 1] > 0).astype(int)
@@ -59,3 +67,4 @@ def main():
     
     
 main()
+'''
