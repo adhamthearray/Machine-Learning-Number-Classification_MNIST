@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import keras
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from DT.DecisionTree import DecisionTree
 
 # ======================
 # 1. LOAD DATA
@@ -23,7 +24,6 @@ X_test = X_test / 255.0
 y_train_bin = (y_train == 6).astype(int)
 y_test_bin  = (y_test == 6).astype(int)
 
-
 # ======================
 # 3. VARIANCE FILTER
 # ======================
@@ -40,7 +40,6 @@ X_train_clean, mask = variance_threshold(X_train)
 X_test_clean = X_test[:, mask]
 
 print("After variance filtering:", X_train_clean.shape)
-
 
 # ======================
 # 4. BALANCE DATA (UNDERSAMPLING)
@@ -62,7 +61,6 @@ X_train_bal, y_train_bal = balance_data(X_train_clean, y_train_bin)
 print("Balanced shape:", X_train_bal.shape)
 print("Class counts:", np.bincount(y_train_bal))
 
-
 # ======================
 # 5. PCA (FULL)
 # ======================
@@ -80,7 +78,6 @@ def pca_full(X):
 
     return eigenvalues, eigenvectors, mean
 
-
 def choose_k(eigenvalues, threshold=0.95):
     explained_variance_ratio = eigenvalues / np.sum(eigenvalues)
     cumulative = np.cumsum(explained_variance_ratio)
@@ -88,83 +85,33 @@ def choose_k(eigenvalues, threshold=0.95):
     k = np.argmax(cumulative >= threshold) + 1
     return k, cumulative
 
-
-# PCA on BALANCED data
-eigenvalues, eigenvectors, mean = pca_full(X_train_clean)
+# IMPORTANT: PCA ON BALANCED TRAINING DATA
+eigenvalues, eigenvectors, mean = pca_full(X_train_bal)
 k, cumulative = choose_k(eigenvalues, threshold=0.95)
 
 print(f"\nOptimal number of components: {k}")
-
 
 # ======================
 # 6. PROJECT DATA
 # ======================
 components = eigenvectors[:, :k]
 
-
-# After projection
-X_train_pca = (X_train_clean - mean) @ components
+X_train_pca = (X_train_bal - mean) @ components
 X_test_pca  = (X_test_clean - mean) @ components
 
-# Normalize PCA features
-mean_pca = np.mean(X_train_pca, axis=0)
-std_pca = np.std(X_train_pca, axis=0)
-
-X_train_pca = (X_train_pca - mean_pca) / std_pca
-X_test_pca  = (X_test_pca - mean_pca) / std_pca
-
-print("Shape after PCA:", X_train_pca.shape)
-
+print("Shape after PCA (train):", X_train_pca.shape)
+print("Shape after PCA (test):", X_test_pca.shape)
 
 # ======================
-# 7. GAUSSIAN NAIVE BAYES
+# 7. DECISION TREE
 # ======================
-def gaussian_naive_train(X, y):
-    classes = np.unique(y)
-    model = {}
-    priors = {}
-
-    for c in classes:
-        X_c = X[y == c]
-
-        priors[c] = len(X_c) / len(X)
-
-        mean = np.mean(X_c, axis=0)
-        var = np.var(X_c, axis=0) + 1e-9
-
-        model[c] = (mean, var)
-
-    return model, priors
-
-
-def predict(X, model, priors):
-    predictions = []
-
-    for x in X:
-        best_class = None
-        best_score = -float("inf")
-
-        for c in model:
-            mean, var = model[c]
-
-            log_prob = -((x - mean) ** 2) / (2 * var) - 0.5 * np.log(2 * np.pi * var)
-            score = np.log(priors[c]) + np.sum(log_prob)
-
-            if score > best_score:
-                best_score = score
-                best_class = c
-
-        predictions.append(best_class)
-
-    return np.array(predictions)
-
-
-# Train
-model, priors = gaussian_naive_train(X_train_pca, y_train_bin)
+dt = DecisionTree(maxDepth=8, minSamplesSplit=10)
+X_train_small = X_train_bal[:5000]
+y_train_small = y_train_bal[:5000]
+dt.fit(X_train_small, y_train_small)
 
 # Predict
-predictions = predict(X_test_pca, model, priors)
-
+predictions = dt.predict(X_test_pca)
 
 # ======================
 # 8. EVALUATION
@@ -175,7 +122,7 @@ print("\nAccuracy:", accuracy)
 cm = confusion_matrix(y_test_bin, predictions)
 print("\nConfusion Matrix:\n", cm)
 
-plt.figure(figsize=(6,5))
+plt.figure(figsize=(6, 5))
 sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
 plt.xlabel("Predicted")
 plt.ylabel("Actual")
@@ -188,20 +135,17 @@ print(classification_report(
     target_names=["Not 1", "Is 1"]
 ))
 
-
 # ======================
 # 9. PCA SPACE VISUALIZATION
 # ======================
-plt.figure(figsize=(8,6))
+plt.figure(figsize=(8, 6))
 plt.scatter(X_train_pca[:, 0], X_train_pca[:, 1],
-            c=y_train_bin, cmap='coolwarm', s=5)
-
+            c=y_train_bal, cmap='coolwarm', s=5)
 plt.xlabel("PC1")
 plt.ylabel("PC2")
 plt.title("PCA Space (1 vs Not 1)")
 plt.colorbar()
 plt.show()
-
 
 # ======================
 # 10. EXPLAINED VARIANCE
@@ -212,6 +156,19 @@ plt.xlabel("Number of Components")
 plt.ylabel("Cumulative Variance")
 plt.title("Explained Variance Curve")
 plt.show()
-train_preds = predict(X_train_pca, model, priors)
-print("Train Accuracy:", accuracy_score(y_train_bin, train_preds))
-# Count classes
+
+# Optional: train accuracy on balanced train set
+train_preds = dt.predict(X_train_pca)
+print("Train Accuracy:", accuracy_score(y_train_bal, train_preds))
+
+# Count classes in test set
+num_6 = np.sum(y_test_bin == 1)
+num_not6 = np.sum(y_test_bin == 0)
+
+print("\nTest set distribution:")
+print("Is 6:", num_6)
+print("Not 6:", num_not6)
+
+ratio = num_not6 / num_6
+print("\nRatio (Not 6 : 6) =", ratio)
+print("Ratio (6 : Not 6) = 1 :", ratio)
