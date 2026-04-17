@@ -1,0 +1,18 @@
+🔥 Variance + PCA (Your Idea Summary)
+✅ Step 1: Variance Filtering
+Compute variance for each pixel (feature)
+If variance ≈ 0 → drop it
+Why?
+Pixel is almost constant across all images
+Carries no useful information
+Only adds noise + computation
+
+👉 Result: remove dead features
+
+✅ Step 2: PCA (Principal Component Analysis)
+Take remaining features
+Transform them into new features (principal components)
+Each component = combination of multiple pixels
+Keep only top k components (highest variance)
+
+👉 Result: compress useful information
