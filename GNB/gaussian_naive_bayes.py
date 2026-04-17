@@ -1,59 +1,48 @@
-#Codak we7e4 ya adham
 import numpy as np
 
-def gaussian(x, mean, var):
-    exponent = np.exp(-((x - mean) ** 2) / (2 * var))
-    return (1 / np.sqrt(2 * np.pi * var)) * exponent
+class GNB:
 
-def gaussian_naive_train(X, y):
-    classes = np.unique(y)
+    def gaussian_naive_train(self, X, y):
+        classes = np.unique(y)
 
-    model = {}
-    priors = {}
+        model = {}
+        priors = {}
 
-    for c in classes:
-        X_c = X[y == c]  # filter rows of this class
+        for c in classes:
+            X_c = X[y == c]  
 
-        priors[c] = len(X_c) / len(X)
+            priors[c] = len(X_c) / len(X)
 
-        mean = np.mean(X_c, axis=0)
-        var = np.var(X_c, axis=0) + 1e-9  # avoid zero
+            mean = np.mean(X_c, axis=0)
+            var = np.var(X_c, axis=0) + 1e-9  
 
-        model[c] = (mean, var)
+            model[c] = (mean, var)
 
-    return model, priors
-
-def predict(X, model, priors):
-    predictions = []
-
-    for x in X:  # for each test image
-
-        best_class = None
-        best_score = -float("inf")  # very small number
-
-        for c in model:  # for each class (0, 1, ...)
-
-            mean, var = model[c]
-
-            score = np.log(priors[c])  # start with prior
+        self.model = model
+        self.priors = priors
 
 
+    def predict(self, X):
+        predictions = []
 
-            log_prob = -((x - mean) ** 2) / (2 * var) - 0.5 * np.log(2 * np.pi * var)
-            score += np.sum(log_prob)
+        for x in X:  
 
-            # keep the best class
-            if score > best_score:
-                best_score = score
-                best_class = c
+            best_class = None
+            best_score = -float("inf")  
 
-        predictions.append(best_class)
+            for c in self.model: 
 
-    return predictions
-# Training data
+                mean, var = self.model[c]
 
-model, priors = gaussian_naive_train(X_train, y_train)
+                score = np.log(self.priors[c])  
 
-predictions = predict(X_test, model, priors)
+                log_prob = -((x - mean) ** 2) / (2 * var) - 0.5 * np.log(2 * np.pi * var)
+                score += np.sum(log_prob)
 
-print("Predictions:", predictions)
+                if score > best_score:
+                    best_score = score
+                    best_class = c
+
+            predictions.append(best_class)
+
+        return predictions
