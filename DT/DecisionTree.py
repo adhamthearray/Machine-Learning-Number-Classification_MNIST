@@ -1,7 +1,8 @@
 import numpy as np
+import math
 class DecisionTree:
     class Node:
-        def __init__(self , feature = None , threshold = None , left = None , right = None ,decision= None):
+        def __init__(self , feature = None , threshold = None , left = None , right = None ,decision= None ):
             self.feature = feature
             self.threshold = threshold
             self.left = left
@@ -9,9 +10,17 @@ class DecisionTree:
             self.decision = decision
 
             
-    def __init__(self , maxDepth , minSamplesSplit):
+    def __init__(self , maxDepth , minSamplesSplit , criterion , maxFeatures , minSampleLeafs ,classWeights = None ):
         self.maxDepth = maxDepth
         self.minSamplesSplit = minSamplesSplit
+        self.minSampleLeafs = minSampleLeafs
+        self.criterion = criterion
+        self.maxFeatures = maxFeatures
+        self.allowedCriteria = ["entropy" , "gini"]
+        self.classWeights = classWeights
+
+        if criterion not in self.allowedCriteria:
+            raise ValueError("Criterion has to be either entropy or gini")
         self.root = None
     
     def majorityLabel(self, labels):
@@ -29,8 +38,10 @@ class DecisionTree:
         for i in range(len(sortedLabels)-1):
             leftLabelCounts[sortedLabels[i]]+=1
             rightLabelCounts[sortedLabels[i]]-=1
+            if np.sum(leftLabelCounts)< self.minSampleLeafs: continue
+            if np.sum(rightLabelCounts) < self.minSampleLeafs: continue
             if sortedFeatureValues[i] == sortedFeatureValues[i+1]: continue
-            w_entropy = self.computeEntropy(leftLabelCounts , rightLabelCounts , labelCount)
+            w_entropy = self.computeImpurity(leftLabelCounts , rightLabelCounts , labelCount)
             threshold = (sortedFeatureValues[i] + sortedFeatureValues[i+1])/2
             thresholds.append(threshold)
             entropy.append(w_entropy)
@@ -40,28 +51,55 @@ class DecisionTree:
         minEntropy = entropy[minEntropyIndex]
         minThreshold = thresholds[minEntropyIndex]
         return minThreshold , minEntropy
-    def computeEntropy(self , leftLabelCounts , rightLabelCounts , labelCount):
+    def computeImpurity(self , leftLabelCounts , rightLabelCounts , labelCount):
             w_entropy = 0
             leftEntropy = 0 
             rightEntropy = 0
             leftLabelCount = np.sum(leftLabelCounts)
             rightLabelCount = np.sum(rightLabelCounts)
-            for count in leftLabelCounts:
+            if self.classWeights!=None:
+                weightsArr = np.array([self.classWeights.get(i, 1)
+                               for i in range(leftLabelCounts.size)])
+            else:
+                weightsArr = np.ones(leftLabelCounts.size)
+            weightedCountsL = weightsArr * leftLabelCounts
+            weightedCountsR = weightsArr * rightLabelCounts
+            wLeftLabelCount = np.sum(weightedCountsL)
+            wRightLabelCount = np.sum(weightedCountsR)
+
+            for count in weightedCountsL:
                 if count == 0: continue
-                prob = count/leftLabelCount
-                leftEntropy += -prob*np.log2(prob)
-            for count in rightLabelCounts:
+                prob = count/wLeftLabelCount
+                if self.criterion == 'entropy':
+                    leftEntropy += -prob*np.log2(prob)
+                else:
+                    leftEntropy += pow(prob , 2)
+            for count in weightedCountsR:
                 if count == 0: continue
-                prob = count/rightLabelCount
-                rightEntropy += -prob*np.log2(prob)
-            w_entropy = leftLabelCount/labelCount * leftEntropy +rightLabelCount/labelCount *rightEntropy
+                prob = count/wRightLabelCount
+                if self.criterion == 'entropy':
+                    rightEntropy += -prob*np.log2(prob)
+                else:
+                    rightEntropy += pow(prob , 2)
+            if self.criterion == 'entropy':
+                w_entropy = leftLabelCount/labelCount * leftEntropy +rightLabelCount/labelCount *rightEntropy
+            else:
+                w_entropy = leftLabelCount/labelCount * (1-leftEntropy) +rightLabelCount/labelCount *(1-rightEntropy)
             return w_entropy
     def getFeature(self,trainingData , labels):
         entropy = []
         thresholds = []
         featureIndices = []
         noOfFeatures = trainingData.shape[1]
-        for j in range(noOfFeatures):
+        if self.maxFeatures != None:
+            if self.maxFeatures == 'sqrt':
+                self.maxFeatures = int(math.sqrt(noOfFeatures))
+            elif self.maxFeatures == 'log2':
+                self.maxFeatures= int(np.log2(noOfFeatures))
+            featureArr = np.random.choice(noOfFeatures, size=self.maxFeatures,      replace=False)
+        else:
+            featureArr = np.arange(noOfFeatures)
+        for j in featureArr:
             featureValues = trainingData[:,j]
             optimalThreshold , minEntropy = self.getThreshold(featureValues , labels)
             if optimalThreshold == None: continue
