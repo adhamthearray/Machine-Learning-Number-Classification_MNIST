@@ -1,10 +1,14 @@
 import numpy as np
 
 class LogReg():
-    def __init__(self, max_iterations=100, threshold=0.5, learning_rate=0.01):
+    def __init__(self, max_iterations=100, threshold=0.5, learning_rate=0.01, class_weight=None, reg_eqn=None, reg_param=0, random_state=42):
         self.threshold = threshold
         self.max_iterations = max_iterations
         self.learning_rate = learning_rate
+        self.class_weight = class_weight
+        self.reg_eqn = reg_eqn
+        self.reg_param=reg_param
+        self.random_state=random_state
         self.weights = None
         self.bias = 0.0
         
@@ -22,10 +26,28 @@ class LogReg():
         return - (1/m) * np.sum(y * np.log(preds) + (1 - y) * np.log(1 - preds))
     
     def fit(self, x, y):
+        np.random.seed(42)
         num_samples, num_features = x.shape
-        self.weights = np.zeros(num_features)
+        classes = np.unique(y)
+        self.weights = np.random.randn(num_features) * 0.01
         self.bias = 0.0
         
+        
+        classes_weights = {}
+        if self.class_weight is None:
+            classes_weights = {label: 1.0 for label in classes}
+        elif self.class_weight == 'balanced':
+            for label in classes:
+                classes_weights[label] = num_samples / (len(classes) * np.sum(y == label))
+        else:
+            classes_weights = self.class_weight
+            
+        loss_weights = np.ones_like(y, dtype=float)
+        for label in classes:
+            loss_weights[y == label] = classes_weights[label]
+            
+        weight_sum = np.sum(loss_weights)
+            
         for i in range(self.max_iterations):
             linear_predictions = self.__linear(x)
             probas = self.__sigmoid(linear_predictions)
@@ -34,8 +56,14 @@ class LogReg():
             if i % 10 == 0:
                 print(f"Iteration {i}, Loss: {cost}")
             
-            dw = np.dot(x.T, (probas-y)) / num_samples
-            db = np.sum(probas-y) / num_samples
+            
+            dw = np.dot(x.T, loss_weights*(probas-y)) / weight_sum
+            db = np.sum(loss_weights*(probas-y)) / weight_sum
+            
+            if self.reg_eqn == 'L2':
+                dw += (2 * self.reg_param / weight_sum) * self.weights
+            elif self.reg_eqn == 'L1':
+                dw += (self.reg_param / weight_sum) * np.sign(self.weights)
             
             self.weights -= self.learning_rate * dw
             self.bias -= self.learning_rate * db

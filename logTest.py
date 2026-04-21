@@ -1,6 +1,6 @@
 import numpy as np
 import os
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"  #Tried to supress some warnings but it did not but warnings are only because of loading dataset from tensorflow so not a big problem
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"  #Tried to supress some warnings but it did not but warnings are only because of loading dataset from tensorflow so not a big prob
 from tensorflow.keras.datasets import mnist
 
 from LogisticRegression import LogReg
