@@ -74,25 +74,87 @@ class LogReg():
         return (probas >= self.threshold).astype(int)
 
 
-'''
-def main():
-    X3 = np.random.randn(100, 2)
-    y3 = (X3[:, 0] + X3[:, 1] > 0).astype(int)
-    
-    split = 80
 
-    X_train = X3[:split]
-    y_train = y3[:split]
 
-    X_test = X3[split:]
-    y_test = y3[split:]
+class MultiLogReg():
+    def __init__(self, max_iterations=100, learning_rate=0.01, class_weight=None, reg_eqn=None, reg_param=0, random_state=42):
+        self.max_iterations = max_iterations
+        self.learning_rate = learning_rate
+        self.class_weight = class_weight
+        self.reg_eqn = reg_eqn
+        self.reg_param = reg_param
+        self.random_state = random_state
+        self.classes = None
+        self.weights = None
+        self.bias = None
+        
+    def __linear(self, x):
+        return np.dot(x, self.weights) + self.bias
     
-    model4 = LogReg(learning_rate=0.1, max_iterations=1000)
-    model4.fit(X_train, y_train)
-
-    preds4 = model4.predict(X_test)
-    print("Test Accuracy:", np.mean(preds4 == y_test))
+    def __softmax(self, z):
+        e_z = np.exp(z - np.max(z, axis=-1, keepdims=True))
+        return e_z / np.sum(e_z, axis=-1, keepdims=True)
     
+    def __one_hot(self, y):
+        n_samples = len(y)
+        classes = np.unique(y)
+        one_hot = np.zeros((n_samples, len(classes)))
+        one_hot[np.arange(n_samples), y] = 1
+        return one_hot
     
-main()
-'''
+    def __loss(self, preds, y_one_hot):
+        m = len(y_one_hot)
+        eps = 1e-9
+        preds = np.clip(preds, eps, 1 - eps)
+        return -np.sum(y_one_hot * np.log(preds)) / m
+    
+    def fit(self, x, y):
+        np.random.seed(self.random_state)
+        num_samples, num_features = x.shape
+        self.classes = np.unique(y)
+        num_classes = len(self.classes)
+        self.weights = np.random.randn(num_features, num_classes) * 0.01
+        self.bias = np.zeros(num_classes)
+        
+        classes_weights = {}
+        if self.class_weight is None:
+            classes_weights = {label: 1.0 for label in self.classes}
+        elif self.class_weight == 'balanced':
+            for label in self.classes:
+                classes_weights[label] = num_samples / (len(self.classes) * np.sum(y == label))
+        else:
+            classes_weights = self.class_weight
+            
+        loss_weights = np.ones_like(y, dtype=float)
+        for label in self.classes:
+            loss_weights[y == label] = classes_weights[label]
+            
+        weight_sum = np.sum(loss_weights)
+        
+        loss_weights = loss_weights.reshape(-1,1)
+        y_one_hot = self.__one_hot(y)
+            
+        for i in range(self.max_iterations):
+            linear_predictions = self.__linear(x)
+            probas = self.__softmax(linear_predictions)
+            cost = self.__loss(probas, y_one_hot)
+            
+            if i % 10 == 0:
+                print(f"Iteration {i}, Loss: {cost}")
+            
+            dw = np.dot(x.T, loss_weights*(probas-y_one_hot)) / weight_sum
+            db = np.sum(loss_weights*(probas-y_one_hot), axis=0) / weight_sum
+            
+            if self.reg_eqn == 'L2':
+                dw += (2 * self.reg_param / weight_sum) * self.weights
+            elif self.reg_eqn == 'L1':
+                dw += (self.reg_param / weight_sum) * np.sign(self.weights)
+            
+            self.weights -= self.learning_rate * dw
+            self.bias -= self.learning_rate * db
+    
+    def predict(self, test):
+        linear_predictions = self.__linear(test)
+        probas = self.__softmax(linear_predictions)
+        preds_indices = np.argmax(probas, axis=1)
+        return self.classes[preds_indices]
