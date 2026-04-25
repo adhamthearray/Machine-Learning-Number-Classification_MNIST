@@ -53,8 +53,8 @@ class LogReg():
             probas = self.__sigmoid(linear_predictions)
             cost = self.__loss(probas, y)
             
-            if i % 10 == 0:
-                print(f"Iteration {i}, Loss: {cost}")
+            #if i % 10 == 0:
+                #print(f"Iteration {i}, Loss: {cost}")
             
             
             dw = np.dot(x.T, loss_weights*(probas-y)) / weight_sum
@@ -139,8 +139,8 @@ class MultiLogReg():
             probas = self.__softmax(linear_predictions)
             cost = self.__loss(probas, y_one_hot)
             
-            if i % 10 == 0:
-                print(f"Iteration {i}, Loss: {cost}")
+            #if i % 10 == 0:
+                #print(f"Iteration {i}, Loss: {cost}")
             
             dw = np.dot(x.T, loss_weights*(probas-y_one_hot)) / weight_sum
             db = np.sum(loss_weights*(probas-y_one_hot), axis=0) / weight_sum
