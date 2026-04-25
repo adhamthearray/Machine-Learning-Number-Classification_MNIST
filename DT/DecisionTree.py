@@ -10,7 +10,13 @@ class DecisionTree:
             self.decision = decision
 
             
-    def __init__(self , maxDepth , minSamplesSplit , criterion , maxFeatures , minSampleLeafs ,classWeights = None ):
+    def __init__(self,
+             maxDepth=None,
+             minSamplesSplit=2,
+             criterion="gini",
+             maxFeatures=None,
+             minSampleLeafs=1,
+             classWeights=None):
         self.maxDepth = maxDepth
         self.minSamplesSplit = minSamplesSplit
         self.minSampleLeafs = minSampleLeafs
