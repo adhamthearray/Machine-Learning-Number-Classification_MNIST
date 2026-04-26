@@ -1,6 +1,6 @@
 import numpy as np
 from DT.DecisionTree import DecisionTree
-
+#THhi is still under test and not safe and might not disccuss it until we check some things
 class HobaTitoMambo:
     
     def __init__(self, n_trees=10, max_depth=10, max_features=None):
