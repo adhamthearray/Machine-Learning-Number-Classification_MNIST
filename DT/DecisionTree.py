@@ -119,7 +119,7 @@ class DecisionTree:
         if len(np.unique(labels)) == 1:
             decisionClass = (np.unique(labels))[0]
             return self.Node(decision=decisionClass)
-        if depth >= self.maxDepth:
+        if self.maxDepth is not None and depth >= self.maxDepth:
             return self.Node(decision=self.majorityLabel(labels))
         if len(labels) < self.minSamplesSplit:
             return self.Node(decision=self.majorityLabel(labels))
