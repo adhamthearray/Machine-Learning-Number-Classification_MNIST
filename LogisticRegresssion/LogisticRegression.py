@@ -53,6 +53,11 @@ class LogReg():
             probas = self.__sigmoid(linear_predictions)
             cost = self.__loss(probas, y)
             
+            if self.reg_eqn == 'L2':
+                cost += self.reg_param * np.sum(self.weights ** 2)
+            elif self.reg_eqn == 'L1':
+                cost += self.reg_param * np.sum(np.abs(self.weights))
+            
             #if i % 10 == 0:
                 #print(f"Iteration {i}, Loss: {cost}")
             
@@ -61,7 +66,7 @@ class LogReg():
             db = np.sum(loss_weights*(probas-y)) / weight_sum
             
             if self.reg_eqn == 'L2':
-                dw += (2 * self.reg_param / weight_sum) * self.weights
+                dw += (self.reg_param / weight_sum) * self.weights
             elif self.reg_eqn == 'L1':
                 dw += (self.reg_param / weight_sum) * np.sign(self.weights)
             
