@@ -112,6 +112,8 @@ class DecisionTree:
             entropy.append(minEntropy)
             thresholds.append(optimalThreshold)
             featureIndices.append(j)
+        if len(entropy) == 0:
+            return None, None
         minEntropyIndex = np.argmin(entropy)
         return featureIndices[minEntropyIndex] , thresholds[minEntropyIndex]
     def buildTree(self , data , labels , depth = 0 ):

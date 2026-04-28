@@ -2,9 +2,13 @@ import numpy as np
 from sklearn.model_selection import KFold
 from sklearn.metrics import f1_score
 
-def run_kfold(X, y, train_fn, predict_fn, k=5):
+def run_kfold(X, y, train_fn, predict_fn, k=5 , binary = 1):
     kf = KFold(n_splits=k, shuffle=True, random_state=42)
     scores = []
+    average = 'binary'
+    if not binary:
+        average = 'macro'
+        
 
     for i, (train_idx, val_idx) in enumerate(kf.split(X)):
         X_train_fold = X[train_idx]
@@ -16,7 +20,7 @@ def run_kfold(X, y, train_fn, predict_fn, k=5):
         model = train_fn(X_train_fold, y_train_fold)
         preds = predict_fn(model, X_val_fold)
 
-        score = f1_score(y_val_fold, preds, pos_label=1)
+        score = f1_score(y_val_fold, preds, pos_label=1 , average=average)
         scores.append(score)
 
         print(f"Fold {i+1} → F1: {score:.4f}")
