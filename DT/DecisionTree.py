@@ -72,6 +72,7 @@ class DecisionTree:
             weightedCountsR = weightsArr * rightLabelCounts
             wLeftLabelCount = np.sum(weightedCountsL)
             wRightLabelCount = np.sum(weightedCountsR)
+            totalWeight = wLeftLabelCount + wRightLabelCount
 
             for count in weightedCountsL:
                 if count == 0: continue
@@ -88,9 +89,9 @@ class DecisionTree:
                 else:
                     rightEntropy += pow(prob , 2)
             if self.criterion == 'entropy':
-                w_entropy = leftLabelCount/labelCount * leftEntropy +rightLabelCount/labelCount *rightEntropy
+               w_entropy = (wLeftLabelCount/totalWeight) * leftEntropy + (wRightLabelCount/totalWeight) * rightEntropy
             else:
-                w_entropy = leftLabelCount/labelCount * (1-leftEntropy) +rightLabelCount/labelCount *(1-rightEntropy)
+               w_entropy = (wLeftLabelCount/totalWeight) * (1-leftEntropy) + (wRightLabelCount/totalWeight) * (1-rightEntropy)
             return w_entropy
     def getFeature(self,trainingData , labels):
         entropy = []
@@ -98,11 +99,12 @@ class DecisionTree:
         featureIndices = []
         noOfFeatures = trainingData.shape[1]
         if self.maxFeatures != None:
-            if self.maxFeatures == 'sqrt':
-                self.maxFeatures = int(math.sqrt(noOfFeatures))
-            elif self.maxFeatures == 'log2':
-                self.maxFeatures= int(np.log2(noOfFeatures))
-            featureArr = np.random.choice(noOfFeatures, size=self.maxFeatures,      replace=False)
+            current_max = self.maxFeatures
+            if current_max == 'sqrt':
+                current_max= int(math.sqrt(noOfFeatures))
+            elif current_max == 'log2':
+               current_max= int(np.log2(noOfFeatures))
+            featureArr = np.random.choice(noOfFeatures, size=current_max,      replace=False)
         else:
             featureArr = np.arange(noOfFeatures)
         for j in featureArr:
