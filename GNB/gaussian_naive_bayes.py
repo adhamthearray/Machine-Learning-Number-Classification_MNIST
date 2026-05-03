@@ -1,4 +1,5 @@
 import numpy as np
+from tensorflow import keras
 class GNB:
 
     def gaussian_naive_train(self, X, y):
@@ -44,3 +45,4 @@ class GNB:
             predictions.append(best_class)
 
         return predictions
+(X_train, y_train), (X_test, y_test) = keras.datasets.mnist.load_data()
