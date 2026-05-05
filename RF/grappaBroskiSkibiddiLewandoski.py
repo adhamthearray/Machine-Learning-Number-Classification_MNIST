@@ -1,27 +1,32 @@
 import numpy as np
 from DT.DecisionTree import DecisionTree
-#THhi is still under test and not safe and might not disccuss it until we check some things
+
 class HobaTitoMambo:
     
-    def __init__(self, n_trees=10, max_depth=10, max_features=None):
+    def __init__(self, n_trees=10, max_depth=10, max_features="sqrt", min_samples_split=2, min_sample_leafs=1, criterion="gini",random_state=None):
+        
         self.n_trees = n_trees
         self.max_depth = max_depth
         self.max_features = max_features
+        self.min_samples_split = min_samples_split
+        self.min_sample_leafs = min_sample_leafs
+        self.criterion = criterion
+        self.random_state = random_state
         self.trees = []
+        self.rng = np.random.default_rng(self.random_state)
 
     def __bootstrap_samples(self, x, y):
         n_samples = x.shape[0]
-        idxs = np.random.choice(n_samples, size=n_samples, replace=True)
+        idxs = self.rng.choice(n_samples, size=n_samples, replace=True)
         return x[idxs], y[idxs]
 
     def fit(self, x, y):
         self.trees = []
 
         for i in range(self.n_trees):
-            dt = DecisionTree(
-                maxDepth=self.max_depth,
-                maxFeatures=self.max_features
-            )
+            tree_seed = self.random_state + i if self.random_state is not None else None
+            
+            dt = DecisionTree(maxDepth=self.max_depth,minSamplesSplit=self.min_samples_split,criterion=self.criterion,maxFeatures=self.max_features,minSampleLeafs=self.min_sample_leafs,randomState=tree_seed)
 
             x_s, y_s = self.__bootstrap_samples(x, y)
             dt.fit(x_s, y_s)
