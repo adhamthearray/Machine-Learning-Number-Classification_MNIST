@@ -104,7 +104,8 @@ class MultiLogReg():
         n_samples = len(y)
         classes = np.unique(y)
         one_hot = np.zeros((n_samples, len(classes)))
-        one_hot[np.arange(n_samples), y] = 1
+        for i, label in enumerate(classes):
+            one_hot[y == label, i] = 1
         return one_hot
     
     def __loss(self, preds, y_one_hot):

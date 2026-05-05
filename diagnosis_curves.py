@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-def get_fast_learning_curve(X_train, y_train, X_val, y_val, train_fn, predict_fn, metric_fn, num_steps=10, title="Learning Curve"):
+def analysis_curves(X_train, y_train, X_val, y_val, train_fn, predict_fn, metric_fn, num_steps=10, title="Learning Curve"):
     min_size = 20
     subset_sizes = np.linspace(min_size, len(X_train), num_steps, dtype=int)
     

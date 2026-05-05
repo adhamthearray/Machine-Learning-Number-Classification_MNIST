@@ -3,6 +3,7 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import f1_score
 import itertools
 from DT.DecisionTree import DecisionTree
+from LogisticRegresssion.LogisticRegression import MultiLogReg
 def manual_grid_search_DT(X, y, param_grid, k=5):
 
     keys = list(param_grid.keys())
@@ -60,3 +61,63 @@ def manual_grid_search_DT(X, y, param_grid, k=5):
     print("Best score:", best_score)
 
     return best_params, best_score, results
+
+
+def gridSearchLog(x, y, param_grid, k_cross=3):
+    keys, values = zip(*param_grid.items())
+    combinations = []
+    
+    for v in itertools.product(*values):
+        combinations.append(dict(zip(keys,v)))
+        
+    best_score = -1
+    best_params = None
+    results = []
+    
+    for params in combinations:
+        
+        kf = KFold(n_splits=k_cross, shuffle=True, random_state=42)
+
+        fold_scores = []
+
+        for train_idx, val_idx in kf.split(x):
+
+            X_train_fold = x[train_idx]
+            X_val_fold = x[val_idx]
+
+            y_train_fold = y[train_idx]
+            y_val_fold = y[val_idx]
+
+            model = MultiLogReg(
+                max_iterations=params.get('max_iterations',100),
+                learning_rate=params.get('learning_rate',0.1),
+                class_weight=params.get('class_weight',None), 
+                reg_eqn=params.get('reg_eqn',None), 
+                reg_param=params.get('reg_param',0), 
+                random_state=params.get('random_state',42)
+            )
+
+            model.fit(X_train_fold, y_train_fold)
+
+            preds = model.predict(X_val_fold)
+
+            score = f1_score(y_val_fold, preds, average="macro")
+
+            fold_scores.append(score)
+        
+        avg_score = sum(fold_scores) / len(fold_scores)
+
+        print(f"Average f1-score of {params}:", avg_score)
+
+        results.append((params, avg_score))
+
+        if avg_score > best_score:
+            best_score = avg_score
+            best_params = params
+    
+    print("Best params:", best_params)
+    print("Best score:", best_score)
+
+    return best_params, best_score, results
+            
+        
