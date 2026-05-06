@@ -152,7 +152,7 @@ class MultiLogReg():
             db = np.sum(loss_weights*(probas-y_one_hot), axis=0) / weight_sum
             
             if self.reg_eqn == 'L2':
-                dw += (2 * self.reg_param / weight_sum) * self.weights
+                dw += (self.reg_param / weight_sum) * self.weights
             elif self.reg_eqn == 'L1':
                 dw += (self.reg_param / weight_sum) * np.sign(self.weights)
             

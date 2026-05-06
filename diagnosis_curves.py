@@ -1,6 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 def analysis_curves(X_train, y_train, X_val, y_val, train_fn, predict_fn, metric_fn, num_steps=10, title="Learning Curve"):
+    indices = np.random.permutation(len(X_train))
+    X_train = X_train[indices]
+    y_train = y_train[indices]
+    
     min_size = 20
     subset_sizes = np.linspace(min_size, len(X_train), num_steps, dtype=int)
     
