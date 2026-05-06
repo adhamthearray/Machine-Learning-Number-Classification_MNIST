@@ -7,7 +7,10 @@ from sklearn.metrics import (accuracy_score, precision_score, recall_score,
                              f1_score, classification_report,
                              confusion_matrix, ConfusionMatrixDisplay)
 
-from linear_svm import LinearSVMScartch
+try:
+    from linear_svm import LinearSVMScartch
+except ModuleNotFoundError:
+    from SVM.linear_svm import LinearSVMScartch
 
 RANDOM_STATE = 42
 
