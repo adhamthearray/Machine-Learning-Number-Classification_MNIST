@@ -1,0 +1,16 @@
+# =========================
+# VGG16 Deep Learning Data
+# =========================
+# Ignore the extracted folders
+vgg16_gap_train.npz/
+vgg16_gap_test.npz/
+
+# Ignore the zipped versions (just in case)
+vgg16_gap_train.npz.zip
+vgg16_gap_test.npz.zip
+
+# Ignore all raw NumPy data files generally
+*.npy
+*.npz
+vgg16_gap_test.npz
+vgg16_gap_train.npz
