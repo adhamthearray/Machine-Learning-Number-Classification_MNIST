@@ -1,64 +1,71 @@
 import numpy as np
+import pickle
 from tensorflow.keras.datasets import mnist
 from sklearn.metrics import accuracy_score, f1_score, classification_report, confusion_matrix
 from RF.grappaBroskiSkibiddiLewandoski import HobaTitoMambo
 
-def test_mnist_random_forest():
-    print("Loading MNIST dataset...")
-    (X_train_full, y_train_full), (X_test_full, y_test_full) = mnist.load_data()
+#Download Data
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
 
-    # 1. Subsample the dataset for custom model performance
-    # Using 5,000 for training and 1,000 for testing to keep execution time reasonable
-    train_samples = 60000
-    test_samples = 10000
+X_train = X_train / 255.0
+X_test = X_test / 255.0
 
-    X_train_sub = X_train_full[:train_samples]
-    y_train = y_train_full[:train_samples]
-    
-    X_test_sub = X_test_full[:test_samples]
-    y_test = y_test_full[:test_samples]
 
-    # 2. Feature Extraction: Flatten the 28x28 images into 1D arrays of 784 features
-    print("Flattening images...")
-    X_train_flat = X_train_sub.reshape(X_train_sub.shape[0], -1)
-    X_test_flat = X_test_sub.reshape(X_test_sub.shape[0], -1)
+from skimage.feature import hog
 
-    # 3. Data Processing: Scaling performed strictly AFTER splitting to prevent data leakage
-    print("Normalizing features...")
-    X_train = X_train_flat / 255.0
-    X_test = X_test_flat / 255.0
+def extract_hog_features(X):
+    features = []
 
-    # 4. Initialize and Train the Model
-    # max_depth=None allows trees to grow until leaves are pure (or min_samples_split is hit)
-    print("Initializing HobaTitoMambo Random Forest...")
-    rf = HobaTitoMambo(
-        n_trees=10, 
-        max_depth=15, 
-        max_features="sqrt", 
+    for img in X:
+        img_2d = img.reshape(28, 28)
+
+        hog_features = hog(
+            img_2d,
+            orientations=9,
+            pixels_per_cell=(4, 4),
+            cells_per_block=(2, 2),
+            block_norm='L2-Hys',
+            feature_vector=True
+        )
+
+        features.append(hog_features)
+
+    return np.array(features)
+
+
+X_train_HOG = extract_hog_features(X_train)
+X_test_HOG = extract_hog_features(X_test)
+
+print("Initializing HobaTitoMambo Random Forest...")
+rf = HobaTitoMambo(
+        n_trees=20, 
+        max_depth=15,
+        min_samples_split=20,
+        min_sample_leafs=5,
+        max_features="sqrt",
+        criterion="gini", 
         random_state=42
     )
 
-    print("Training model (this may take a few minutes)...")
-    rf.fit(X_train, y_train)
+print("Training model (this may take a few minutes)...")
+rf.fit(X_train_HOG, y_train)
 
-    # 5. Evaluate the Model
-    print("Predicting on test set...")
-    predictions = rf.predict(X_test)
+print("Predicting on test set...")
+predictions = rf.predict(X_test_HOG)
 
-    # Calculate required project metrics
-    accuracy = accuracy_score(y_test, predictions)
-    # Using 'macro' average for multi-class F1-score
-    f1 = f1_score(y_test, predictions, average='macro') 
-    conf_matrix = confusion_matrix(y_test, predictions)
+accuracy = accuracy_score(y_test, predictions)
+conf_matrix = confusion_matrix(y_test, predictions)
 
-    print("\n--- Evaluation Results ---")
-    print(f"Accuracy: {accuracy * 100:.2f}%")
-    print(f"Macro F1-Score: {f1:.4f}")
-    print("\nConfusion Matrix:")
-    print(conf_matrix)
+print("\n--- Evaluation Results ---")
+print(f"Accuracy: {accuracy * 100:.2f}%")
+print("\nConfusion Matrix:")
+print(conf_matrix)
     
-    print("\nDetailed Classification Report:")
-    print(classification_report(y_test, predictions))
+print("\nDetailed Classification Report:")
+print(classification_report(y_test, predictions))
 
-if __name__ == "__main__":
-    test_mnist_random_forest()
+model_filename = 'rf_hog_model.pkl'
+print(f"\nSaving model to {model_filename}...")
+with open(model_filename, 'wb') as file:
+    pickle.dump(rf, file)
+print("Model saved successfully!")
