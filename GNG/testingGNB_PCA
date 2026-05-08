@@ -1,0 +1,323 @@
+import numpy as np
+from tensorflow import keras
+from skimage.feature import hog
+from sklearn.decomposition import PCA
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score
+)
+
+# =========================================================
+# GNB
+# =========================================================
+class GNB:
+
+    def gaussian_naive_train(self, X, y):
+
+        classes = np.unique(y)
+
+        model = {}
+        priors = {}
+
+        for c in classes:
+
+            X_c = X[y == c]
+
+            priors[c] = len(X_c) / len(X)
+
+            mean = np.mean(X_c, axis=0)
+            var = np.var(X_c, axis=0) + 1e-9
+
+            model[c] = (mean, var)
+
+        self.model = model
+        self.priors = priors
+
+    def predict(self, X, class_weights=None):
+
+        predictions = []
+
+        for x in X:
+
+            best_class = None
+            best_score = -float("inf")
+
+            for c in self.model:
+
+                mean, var = self.model[c]
+
+                score = np.log(self.priors[c])
+
+                # Apply class weights if provided
+                if class_weights is not None:
+                    score += np.log(class_weights[c])
+
+                log_prob = (
+                    -((x - mean) ** 2) / (2 * var)
+                    - 0.5 * np.log(2 * np.pi * var)
+                )
+
+                score += np.sum(log_prob)
+
+                if score > best_score:
+                    best_score = score
+                    best_class = c
+
+            predictions.append(best_class)
+
+        return predictions
+
+
+# =========================================================
+# HOG FEATURE EXTRACTION
+# =========================================================
+def extract_hog_features(X):
+
+    features = []
+
+    for img in X:
+
+        hog_features = hog(
+            img,
+            orientations=9,
+            pixels_per_cell=(4, 4),
+            cells_per_block=(2, 2),
+            block_norm='L2-Hys',
+            feature_vector=True
+        )
+
+        features.append(hog_features)
+
+    return np.array(features)
+
+
+# =========================================================
+# LOAD MNIST
+# =========================================================
+(X_train, y_train), (X_test, y_test) = keras.datasets.mnist.load_data()
+
+# =========================================================
+# NORMALIZATION
+# =========================================================
+X_train = X_train / 255.0
+X_test = X_test / 255.0
+
+print("Original Train Shape:", X_train.shape)
+print("Original Test Shape :", X_test.shape)
+
+# =========================================================
+# HOG EXTRACTION
+# =========================================================
+print("\n🔥 Extracting HOG Features...")
+
+X_train_hog = extract_hog_features(X_train)
+X_test_hog = extract_hog_features(X_test)
+
+print("HOG Train Shape:", X_train_hog.shape)
+print("HOG Test Shape :", X_test_hog.shape)
+
+# =========================================================
+# PCA VALUES
+# =========================================================
+pca_values = [10, 20, 30, 50, 75, 100, 150, 200]
+
+# =========================================================
+# MULTI-CLASS CLASSIFICATION
+# =========================================================
+print("\n" + "="*90)
+print("🔥 MULTI-CLASS CLASSIFICATION (0 → 9)")
+print("="*90)
+
+best_multi_f1 = 0
+best_multi_pca = 0
+
+for n in pca_values:
+
+    if n > X_train_hog.shape[1]:
+        continue
+
+    print("\n" + "-"*90)
+    print(f"🎯 PCA = {n}")
+    print("-"*90)
+
+    # =====================================================
+    # PCA
+    # =====================================================
+    pca = PCA(n_components=n)
+
+    X_train_pca = pca.fit_transform(X_train_hog)
+    X_test_pca = pca.transform(X_test_hog)
+
+    # =====================================================
+    # TRAIN
+    # =====================================================
+    gnb = GNB()
+
+    gnb.gaussian_naive_train(
+        X_train_pca,
+        y_train
+    )
+
+    # =====================================================
+    # PREDICT
+    # =====================================================
+    y_pred = gnb.predict(X_test_pca)
+
+    # =====================================================
+    # METRICS
+    # =====================================================
+    acc = accuracy_score(y_test, y_pred)
+
+    # Macro F1 for multi-class
+    f1 = f1_score(
+        y_test,
+        y_pred,
+        average='macro'
+    )
+
+    print(f"\n✅ Accuracy = {acc:.4f}")
+    print(f"🔥 Macro F1 Score = {f1:.4f}")
+
+    print("\n📋 Classification Report:")
+    print(classification_report(
+        y_test,
+        y_pred
+    ))
+
+    print("\n🧱 Confusion Matrix:")
+    print(confusion_matrix(
+        y_test,
+        y_pred
+    ))
+
+    # =====================================================
+    # BEST PCA BASED ON F1
+    # =====================================================
+    if f1 > best_multi_f1:
+
+        best_multi_f1 = f1
+        best_multi_pca = n
+
+# =========================================================
+# BEST MULTI RESULT
+# =========================================================
+print("\n" + "="*90)
+print("🏆 BEST MULTI-CLASS RESULT")
+print("="*90)
+
+print(f"Best PCA = {best_multi_pca}")
+print(f"Best Macro F1 Score = {best_multi_f1:.4f}")
+
+
+# =========================================================
+# BINARY CLASSIFICATION (6 vs NOT 6)
+# =========================================================
+print("\n" + "="*90)
+print("🔥 BINARY CLASSIFICATION (6 vs NOT 6)")
+print("="*90)
+
+# =========================================================
+# CONVERT LABELS
+# =========================================================
+y_train_binary = (y_train == 6).astype(int)
+y_test_binary = (y_test == 6).astype(int)
+
+print("\nClass Meaning:")
+print("0 = Not 6")
+print("1 = Is 6")
+
+# =========================================================
+# CLASS WEIGHTS
+# =========================================================
+class_weights = {
+    0: 1,
+    1: 10
+}
+
+best_binary_f1 = 0
+best_binary_pca = 0
+
+for n in pca_values:
+
+    if n > X_train_hog.shape[1]:
+        continue
+
+    print("\n" + "-"*90)
+    print(f"🎯 PCA = {n}")
+    print("-"*90)
+
+    # =====================================================
+    # PCA
+    # =====================================================
+    pca = PCA(n_components=n)
+
+    X_train_pca = pca.fit_transform(X_train_hog)
+    X_test_pca = pca.transform(X_test_hog)
+
+    # =====================================================
+    # TRAIN
+    # =====================================================
+    gnb = GNB()
+
+    gnb.gaussian_naive_train(
+        X_train_pca,
+        y_train_binary
+    )
+
+    # =====================================================
+    # PREDICT
+    # =====================================================
+    y_pred = gnb.predict(
+        X_test_pca,
+        class_weights=class_weights
+    )
+
+    # =====================================================
+    # METRICS
+    # =====================================================
+    acc = accuracy_score(
+        y_test_binary,
+        y_pred
+    )
+
+    # Binary F1
+    f1 = f1_score(
+        y_test_binary,
+        y_pred
+    )
+
+    print(f"\n✅ Accuracy = {acc:.4f}")
+    print(f"🔥 F1 Score = {f1:.4f}")
+
+    print("\n📋 Classification Report:")
+    print(classification_report(
+        y_test_binary,
+        y_pred,
+        target_names=["Not 6", "Is 6"]
+    ))
+
+    print("\n🧱 Confusion Matrix:")
+    print(confusion_matrix(
+        y_test_binary,
+        y_pred
+    ))
+
+    # =====================================================
+    # BEST PCA BASED ON F1
+    # =====================================================
+    if f1 > best_binary_f1:
+
+        best_binary_f1 = f1
+        best_binary_pca = n
+
+# =========================================================
+# BEST BINARY RESULT
+# =========================================================
+print("\n" + "="*90)
+print("🏆 BEST BINARY RESULT")
+print("="*90)
+
+print(f"Best PCA = {best_binary_pca}")
+print(f"Best F1 Score = {best_binary_f1:.4f}")
