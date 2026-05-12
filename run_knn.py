@@ -3,40 +3,13 @@ sys.path.insert(0, r'c:\Users\basem\OneDrive\سطح المكتب\Machine_project
 os.chdir(r'c:\Users\basem\OneDrive\سطح المكتب\Machine_project')
 
 import numpy as np
-from collections import Counter
 from sklearn.decomposition import PCA
 from sklearn.metrics import classification_report, f1_score, accuracy_score
 from sklearn.model_selection import train_test_split, KFold
 from skimage.feature import hog
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from tensorflow import keras
-
-# ── CustomKNN (identical to notebook) ──────────────────────────────────────
-class CustomKNN:
-    def __init__(self, k=5, weights='uniform'):
-        self.k = k
-        self.weights = weights
-
-    def fit(self, X, y):
-        self.X_train = np.array(X)
-        self.y_train = np.array(y)
-
-    def predict(self, X_test):
-        return np.array([self._predict_single(x) for x in np.array(X_test)])
-
-    def _predict_single(self, x_test):
-        distances = np.sqrt(np.sum((self.X_train - x_test) ** 2, axis=1))
-        k_indices = np.argsort(distances)[:self.k]
-        k_nearest_labels = self.y_train[k_indices]
-        if self.weights == 'distance':
-            k_distances = distances[k_indices]
-            vote_weights = 1.0 / (k_distances + 1e-5)
-            class_votes = {}
-            for label, weight in zip(k_nearest_labels, vote_weights):
-                class_votes[label] = class_votes.get(label, 0) + weight
-            return max(class_votes, key=class_votes.get)
-        else:
-            return Counter(k_nearest_labels).most_common(1)[0][0]
+from KNN import CustomKNN
 
 def extract_hog_features(X):
     features = []
